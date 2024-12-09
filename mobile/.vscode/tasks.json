@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "android",
+			"problemMatcher": [],
+			"label": "npm: android",
+			"detail": "expo start --android"
+			// bass source ~/.nvm/nvm.sh --no-use ';' nvm install --lts
+		}
+	]
+}
