@@ -14,7 +14,6 @@ import { Feather } from "@expo/vector-icons";
 
 export default function RelatorioPratico({ navigation }) {
   const [categoria, setCategoria] = React.useState("");
-  const [focoCategoria, setfocoCategoria] = React.useState("EN");
 
   const categorias = [
     { key: "1", value: "Preparação de curso" },
@@ -26,22 +25,9 @@ export default function RelatorioPratico({ navigation }) {
     { key: "7", value: "Ministração de cursos" },
   ];
 
-  const [idioma, setIdioma] = React.useState("");
-  const [focoIdioma, setfocoIdioma] = React.useState("EN");
-
-  const idiomas = [
-    { key: "EN", value: "Inglês" },
-    { key: "ES", value: "Espanhol" },
-    { key: "JP", value: "Japonês" },
-    { key: "FR", value: "Francês" },
-    { key: "IT", value: "Italiano" },
-    { key: "AL", value: "Alemão" },
-  ];
-
   const [form, setForm] = useState({
     //Dados pra passar pra api do Rafa
     categoria: "",
-    idioma: "",
     titulo: "",
     cargaHoraria: "",
     proficiencia: "",
@@ -79,41 +65,18 @@ export default function RelatorioPratico({ navigation }) {
             data={categorias}
             placeholder="Categoria"
             search={false}
-            maxHeight={180}
+            maxHeight={280}
             arrowicon={
               <Feather
                 name={"chevron-down"}
                 color={"#374957"}
-                size={PixelRatio.getFontScale() * 20}
+                size={PixelRatio.getFontScale() * 30}
               />
             }
             boxStyles={[
               styles.selectBox,
-              { width: PixelRatio.getFontScale() * 230 },
+              { width: PixelRatio.getFontScale() * 360 },
             ]}
-            inputStyles={styles.selectLabel}
-            dropdownStyles={{
-              zIndex: 1,
-              position: "absolute",
-              top: "100%",
-              width: "100%",
-              backgroundColor: "#D9D9D9",
-            }}
-          />
-          <SelectList
-            setSelected={setIdioma}
-            data={idiomas}
-            placeholder="Idioma"
-            search={false}
-            maxHeight={180}
-            arrowicon={
-              <Feather
-                name={"chevron-down"}
-                color={"#374957"}
-                size={PixelRatio.getFontScale() * 20}
-              />
-            }
-            boxStyles={styles.selectBox}
             inputStyles={styles.selectLabel}
             dropdownStyles={{
               zIndex: 1,
@@ -210,31 +173,35 @@ export default function RelatorioPratico({ navigation }) {
               />
             </View>
           </View>
-        </View>
 
-        <View style={styles.containerEdit} /* Descrição Portifólio */>
-          <TouchableOpacity
-            onPress={() => console.log("Ementa")}
-            style={[styles.editBox, { alignSelf: "center" }]}
-          >
-            <Text style={[styles.labelBoxEdit]}>Descrição</Text>
-            <Feather
-              name={"file-plus"}
-              color={"#374957"}
-              size={PixelRatio.getFontScale() * 24}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => console.log("Ementa")}
-            style={[styles.editBox, { alignSelf: "center" }]}
-          >
-            <Text style={[styles.labelBoxEdit]}>Portifólio</Text>
-            <Feather
-              name={"link"}
-              color={"#374957"}
-              size={PixelRatio.getFontScale() * 24}
-            />
-          </TouchableOpacity>
+          <View style={styles.containerEdit}>
+            <Text style={styles.labelEdit}>Portifólio</Text>
+
+            <View style={{ flexDirection: "row" }}>
+              <View style={styles.boxInput}>
+                <TextInput
+                  style={styles.labelInput}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={form.portifolio}
+                  onChangeText={(portifolio) =>
+                    setForm({ ...form, portifolio })
+                  }
+                />
+              </View>
+
+              <Feather
+                name="edit"
+                color={"#374957"}
+                size={PixelRatio.getFontScale() * 24}
+                style={{
+                  paddingLeft: PixelRatio.getFontScale() * 15,
+                  alignItems: "center",
+                  paddingTop: PixelRatio.getFontScale() * 3,
+                }}
+              />
+            </View>
+          </View>
         </View>
       </View>
 
@@ -336,8 +303,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     width: "100%",
     alignItems: "center",
-    justifyContent: "space-around",
+    justifyContent: "flex-start",
     paddingBottom: PixelRatio.getFontScale() * 15,
+    paddingLeft: PixelRatio.getFontScale() * 25,
   },
 
   containerEdit: {

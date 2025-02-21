@@ -5,16 +5,23 @@ import {
   PixelRatio,
   Image,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
-import React from "react";
-import "react-native-gesture-handler";
+import React, { useEffect, useState } from "react";
 import { SelectList } from "react-native-dropdown-select-list";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { Feather } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../services/api";
 
 export default function Perfil({ navigation }): React.JSX.Element {
-  const [idioma, setIdioma] = React.useState("");
+  const [idioma, setIdioma] = useState("");
+  const [userData, setUserData] = useState(null);
+  const [proeficiencies, setProeficiencies] = useState([]);
+  const [institutionData, setInstitutionData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const idiomas = [
     { key: "EN", value: "Inglês" },
@@ -22,10 +29,80 @@ export default function Perfil({ navigation }): React.JSX.Element {
     { key: "JP", value: "Japonês" },
   ];
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+
+        // Fetch user data
+        const userResponse = await api.get("/user/my_data", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // Fetch language proficiencies
+        const proefResponse = await api.get("/isf_student/my_proeficiency", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // Fetch institution data
+        const institutionResponse = await api.get(
+          "/institution_student/current_institution",
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+
+        setUserData(userResponse.data.data);
+        setProeficiencies(proefResponse.data.proeficiencies);
+
+        if (!institutionResponse.data.error) {
+          const institutionId =
+            institutionResponse.data.registration.idInstituicao;
+
+          const institutionDetailsResponse = await api.get(
+            "/instituicao_ensino",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          );
+
+          // Find the institution with the matching idInstituicao
+          const institution = institutionDetailsResponse.data.find(
+            (inst) => inst.idInstituicao === institutionId,
+          );
+
+          // If the institution is found, you can set the data
+          if (institution) {
+            setInstitutionData({
+              nome: institution.nome,
+              comprovante: institutionResponse.data.registration.comprovante,
+            });
+          } else {
+            console.error("Institution not found");
+          }
+        }
+      } catch (error) {
+        Alert.alert("Erro", "Não foi possível carregar os dados do perfil");
+        console.error("Profile fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#374957" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#E6EAEB" }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
         <View style={styles.container}>
+          {/* Profile Header */}
           <View style={styles.profHeaderContainer}>
             <View style={styles.logoHeaderContainer}>
               <Image
@@ -40,94 +117,85 @@ export default function Perfil({ navigation }): React.JSX.Element {
               />
             </View>
             <View style={styles.textHeaderContainer}>
-              <Text style={styles.nomeHeaderLabel}>Nome e Sobrenome</Text>
-              <Text style={styles.loginHeaderLabel}>loginUsuario</Text>
+              <Text style={styles.nomeHeaderLabel}>
+                {userData?.name} {userData?.surname}
+              </Text>
+              <Text style={styles.loginHeaderLabel}>{userData?.login}</Text>
             </View>
           </View>
 
           <View style={styles.linhaHorizontal} />
 
+          {/* Personal Data */}
           <View>
             <Text style={styles.title}>Dados Pessoais</Text>
             <View style={styles.dadosPContainer}>
               <View>
                 <Text style={[styles.label, { marginBottom: 8 }]}>
-                  Email Pessoal
+                  Email: {userData?.email}@{userData?.email_domain}
                 </Text>
-                <Text style={styles.label}>Telefone</Text>
+                <Text style={styles.label}>
+                  Telefone: ({userData?.DDD}) {userData?.phone}
+                </Text>
               </View>
               <View>
-                <Text style={[styles.label, { marginBottom: 8 }]}>Raça</Text>
-                <Text style={styles.label}>Gênero</Text>
+                <Text style={[styles.label, { marginBottom: 8 }]}>
+                  Etnia: {userData?.ethnicity}
+                </Text>
+                <Text style={styles.label}>Gênero: {userData?.gender}</Text>
               </View>
             </View>
           </View>
 
           <View style={styles.linhaHorizontal} />
 
+          {/* Academic Data */}
           <View>
             <View style={{ flexDirection: "row" }}>
               <View style={{ paddingRight: 10 }}>
                 <Text style={styles.title}>Dados acadêmicos</Text>
               </View>
-              <View style={{ width: PixelRatio.getFontScale() * 150 }}>
-                <SelectList
-                  setSelected={setIdioma}
-                  data={idiomas}
-                  defaultOption={{ key: "EN", value: "Inglês" }}
-                  search={false}
-                  maxHeight={180}
-                  arrowicon={
-                    <Feather
-                      name={"chevron-down"}
-                      color={"#374957"}
-                      size={PixelRatio.getFontScale() * 20}
-                    />
-                  }
-                  boxStyles={{ backgroundColor: "#D9D9D9" }}
-                  inputStyles={styles.label}
-                  dropdownStyles={{
-                    zIndex: 1,
-                    position: "absolute",
-                    top: "100%",
-                    width: "100%",
-                    backgroundColor: "#D9D9D9",
-                  }}
-                />
-              </View>
             </View>
 
             <View style={{ flexDirection: "column" }}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-evenly",
-                  paddingTop: 20,
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    marginBottom: 20,
-                    marginTop: 15,
-                  }}
-                >
-                  <Text style={styles.label}>Proficiência</Text>
+              {proeficiencies.map((proef, index) => (
+                <View key={index}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-evenly",
+                      paddingTop: 20,
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        marginBottom: 20,
+                        marginTop: 15,
+                      }}
+                    >
+                      <Text style={styles.label}>
+                        {proef.idioma} - Nível {proef.nivel}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() =>
+                        Alert.alert("Comprovante", proef.comprovante)
+                      }
+                      style={styles.downloadBox}
+                    >
+                      <Text style={[styles.labelDownload]}>
+                        Documento Comprobatório
+                      </Text>
+                      <Feather
+                        name={"download-cloud"}
+                        color={"#374957"}
+                        size={PixelRatio.getFontScale() * 30}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <TouchableOpacity
-                  onPress={() => console.log("DocCompr")}
-                  style={styles.downloadBox}
-                >
-                  <Text style={[styles.labelDownload]}>
-                    Documento Comprobatório
-                  </Text>
-                  <Feather
-                    name={"download-cloud"}
-                    color={"#374957"}
-                    size={PixelRatio.getFontScale() * 30}
-                  />
-                </TouchableOpacity>
-              </View>
+              ))}
 
               <View
                 style={{
@@ -143,7 +211,9 @@ export default function Perfil({ navigation }): React.JSX.Element {
                     marginTop: 15,
                   }}
                 >
-                  <Text style={styles.label}>Horas Práticas: XX</Text>
+                  <Text style={styles.label}>
+                    Horas Práticas: {userData?.horas_praticas || "XX"}
+                  </Text>
                 </View>
                 <View
                   style={{
@@ -152,7 +222,9 @@ export default function Perfil({ navigation }): React.JSX.Element {
                     marginTop: 15,
                   }}
                 >
-                  <Text style={styles.label}>Horas Teóricas: XX</Text>
+                  <Text style={styles.label}>
+                    Horas Teóricas: {userData?.horas_teoricas || "XX"}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -160,124 +232,49 @@ export default function Perfil({ navigation }): React.JSX.Element {
 
           <View style={styles.linhaHorizontal} />
 
+          {/* Institution Data */}
           <View>
-            <Text style={styles.title}>Componentes Curriculares</Text>
-
-            <View style={{ flexDirection: "column", paddingTop: 20 }}>
-              <View
-                style={{
-                  justifyContent: "space-evenly",
-                  flexDirection: "row",
-                  paddingVertical: 10,
-                }}
-              >
-                <View>
-                  <Text
-                    style={{
-                      width: 150,
-                      flexWrap: "wrap",
-                      textAlign: "center",
-                    }}
-                  >
-                    Núcleo Comum
-                  </Text>
-                </View>
-                <View style={styles.inputBoxMini} />
-                <View>
-                  <Text>/</Text>
-                </View>
-                <View style={styles.inputBoxMini} />
+            <Text style={styles.title}>Instituição</Text>
+            <View style={styles.instituicaoContainer}>
+              <View style={{ marginBottom: 20 }}>
+                <Text style={styles.label}>
+                  {institutionData?.nome || "Nenhuma instituição vinculada"}
+                </Text>
               </View>
-            </View>
 
-            <View style={{ flexDirection: "column", paddingTop: 20 }}>
-              <View
-                style={{
-                  justifyContent: "space-evenly",
-                  flexDirection: "row",
-                  paddingVertical: 10,
-                }}
-              >
-                <View>
-                  <Text
-                    style={{
-                      width: 150,
-                      flexWrap: "wrap",
-                      textAlign: "center",
-                    }}
-                  >
-                    Componente Curricular do Idioma
+              {institutionData?.comprovante && (
+                <TouchableOpacity
+                  onPress={() =>
+                    Alert.alert("Comprovante", institutionData.comprovante)
+                  }
+                  style={styles.downloadBox}
+                >
+                  <Text style={[styles.labelDownload]}>
+                    Comprovante Matrícula
                   </Text>
-                </View>
-                <View style={styles.inputBoxMini} />
-                <View>
-                  <Text>/</Text>
-                </View>
-                <View style={styles.inputBoxMini} />
-              </View>
-            </View>
-
-            <View style={{ flexDirection: "column", paddingTop: 20 }}>
-              <View
-                style={{
-                  justifyContent: "space-evenly",
-                  flexDirection: "row",
-                  paddingVertical: 10,
-                }}
-              >
-                <View>
-                  <Text
-                    style={{
-                      width: 150,
-                      flexWrap: "wrap",
-                      textAlign: "center",
-                    }}
-                  >
-                    Componente Curricular para todos os idiomas
-                  </Text>
-                </View>
-                <View style={styles.inputBoxMini} />
-                <View>
-                  <Text>/</Text>
-                </View>
-                <View style={styles.inputBoxMini} />
-              </View>
-            </View>
-
-            <View style={{ flexDirection: "column", paddingTop: 20 }}>
-              <View
-                style={{
-                  justifyContent: "space-evenly",
-                  flexDirection: "row",
-                  paddingVertical: 10,
-                }}
-              >
-                <View>
-                  <Text
-                    style={{
-                      width: 150,
-                      flexWrap: "wrap",
-                      textAlign: "center",
-                    }}
-                  >
-                    Componente Curricular Português para Estrangeiros
-                  </Text>
-                </View>
-                <View style={styles.inputBoxMini} />
-                <View>
-                  <Text>/</Text>
-                </View>
-                <View style={styles.inputBoxMini} />
-              </View>
+                  <Feather
+                    name={"download-cloud"}
+                    color={"#374957"}
+                    size={PixelRatio.getFontScale() * 30}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
           <View style={styles.linhaHorizontal} />
 
+          {/* Edit Profile */}
           <View style={{ paddingTop: 10 }}>
             <View style={styles.editContainer}>
               <TouchableOpacity
-                onPress={() => navigation.navigate("EditPerfil")}
+                onPress={() =>
+                  navigation.navigate("EditPerfil", {
+                    userData,
+                    proeficiencies,
+                    institutionData,
+                  })
+                }
               >
                 <View style={styles.signInButton}>
                   <Text style={styles.editarLabel}>Editar perfil</Text>
@@ -297,6 +294,7 @@ export default function Perfil({ navigation }): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
+  // ... keep all your existing styles ...
   /////////////// Fontes ///////////////
   container: {
     paddingLeft: PixelRatio.getFontScale() * 24,
@@ -369,7 +367,7 @@ const styles = StyleSheet.create({
     marginVertical: PixelRatio.getFontScale() * 10,
     alignSelf: "stretch",
     justifyContent: "space-evenly",
-    marginLeft: PixelRatio.getFontScale() * -70,
+    marginLeft: PixelRatio.getFontScale() * -10,
   },
 
   /////////////// Proeficiencia ///////////////
@@ -381,9 +379,9 @@ const styles = StyleSheet.create({
 
   /////////////// Instituicao ///////////////
   instituicaoContainer: {
-    marginVertical: PixelRatio.getFontScale() * 10,
-    flexDirection: "row",
-    justifyContent: "space-evenly",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
   },
 
   editContainer: {
@@ -404,5 +402,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     width: PixelRatio.getFontScale() * 60,
     height: PixelRatio.getFontScale() * 25,
+  },
+  // Add new styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#E6EAEB",
   },
 });

@@ -1,13 +1,11 @@
-import {NavigationContainer } from '@react-navigation/native'
+import { NavigationContainer } from "@react-navigation/native";
 
-import DrawerRoutes from './drawer.routes'
+import DrawerRoutes from "./drawer.routes";
 
-export default function Routes(){
-
+export default function Routes() {
   return (
     <NavigationContainer>
       <DrawerRoutes />
     </NavigationContainer>
-  )
-
+  );
 }

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import React from "react";
+import { Checkbox } from "expo-checkbox";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   TextInput,
   SafeAreaView,
@@ -9,25 +11,67 @@ import {
   View,
   Image,
   PixelRatio,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import "react-native-gesture-handler";
-import { Checkbox } from "expo-checkbox";
+import api from "../services/api";
 
 export default function Login({ navigation }): React.JSX.Element {
-  const [form, setForm] = useState({
-    //Dados pra passar pra api do Rafa
-    email: "",
-    senha: "",
-  });
-
-  const [isChecked, setChecked] = useState(false); //Checkbox do remind me
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isChecked, setChecked] = useState(false);
   const [showSenha, setshowSenha] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Erro", "Preencha todos os campos");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Login API call
+      const response = await api.post("/login", {
+        login: email,
+        password: password,
+      });
+
+      const { token } = response.data;
+
+      // Store token
+      await AsyncStorage.setItem("token", token);
+
+      // Get user data
+      const userResponse = await api.get("/user/my_data", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (userResponse.data.error) {
+        throw new Error(userResponse.data.error);
+      }
+
+      const { type } = userResponse.data.data;
+      await AsyncStorage.setItem("userType", type);
+
+      navigation.navigate("IndexDrawer");
+    } catch (error) {
+      console.error("Login error:", error);
+      Alert.alert(
+        "Erro",
+        "Erro ao realizar login. Verifique suas credenciais.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#E6EAEB" }}>
       <View style={styles.container}>
-        <View style={styles.header} /* Logo */>
+        <View style={styles.header}>
           <Image
             source={{
               uri: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fufmg.br%2Fthumbor%2FaPsgSTCyIlwR3g8Oq-FK_bXM2rA%3D%2F14x0%3A207x296%2F352x540%2Fhttps%3A%2F%2Fufmg.br%2Fstorage%2F4%2F1%2F2%2F5%2F4125a853a927625429f1881ba4e0f6db_16910652569013_1465080567.png&f=1&nofb=1&ipt=dff11192280981a77e0dfd1f5701310e88bef3ecc409ff8a347a17ac6cfecd65&ipo=images",
@@ -37,7 +81,7 @@ export default function Login({ navigation }): React.JSX.Element {
           />
         </View>
 
-        <View style={styles.form} /* Email */>
+        <View style={styles.form}>
           <View style={styles.input}>
             <Feather
               name="user"
@@ -50,13 +94,13 @@ export default function Login({ navigation }): React.JSX.Element {
               autoCapitalize="none"
               autoCorrect={false}
               placeholder="login"
-              value={form.email}
-              onChangeText={(email) => setForm({ ...form, email })}
+              value={email}
+              onChangeText={setEmail}
             />
           </View>
         </View>
 
-        <View style={styles.form} /* Senha */>
+        <View style={styles.form}>
           <View style={styles.input}>
             <Feather
               name="lock"
@@ -68,8 +112,8 @@ export default function Login({ navigation }): React.JSX.Element {
               style={styles.inputControllSenha}
               secureTextEntry={!showSenha}
               placeholder="senha"
-              value={form.senha}
-              onChangeText={(senha) => setForm({ ...form, senha })}
+              value={password}
+              onChangeText={setPassword}
             />
             <TouchableOpacity
               onPress={() => setshowSenha(!showSenha)}
@@ -84,7 +128,7 @@ export default function Login({ navigation }): React.JSX.Element {
           </View>
         </View>
 
-        <View style={styles.rememberMeContainer} /* Lembrar conta TODO */>
+        <View style={styles.rememberMeContainer}>
           <Checkbox value={isChecked} onValueChange={setChecked} />
           <Text
             style={[
@@ -96,10 +140,14 @@ export default function Login({ navigation }): React.JSX.Element {
           </Text>
         </View>
 
-        <View style={styles.signInContainer} /* Entrar */>
-          <TouchableOpacity onPress={() => navigation.navigate("IndexDrawer")}>
+        <View style={styles.signInContainer}>
+          <TouchableOpacity onPress={handleLogin} disabled={isLoading}>
             <View style={styles.signInButton}>
-              <Text style={styles.signInLabel}>Entrar</Text>
+              {isLoading ? (
+                <ActivityIndicator color="#0000ff" />
+              ) : (
+                <Text style={styles.signInLabel}>Entrar</Text>
+              )}
             </View>
           </TouchableOpacity>
         </View>
@@ -107,6 +155,8 @@ export default function Login({ navigation }): React.JSX.Element {
     </SafeAreaView>
   );
 }
+
+// Keep the same StyleSheet as before
 
 const styles = StyleSheet.create({
   container: {
@@ -178,6 +228,14 @@ const styles = StyleSheet.create({
   },
   signInButton: {
     backgroundColor: "#D9D9D9",
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: PixelRatio.getFontScale() * 8,
+  },
+  registerInButton: {
+    //backgroundColor: "#D9D9D9",
     borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
